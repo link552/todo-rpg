@@ -1,0 +1,56 @@
+{{define "edit-task-form"}}
+{{$task := .}}
+<form id="edit-task-{{.Id}}-form" class="row g-3" hx-put="/task" hx-target="this" hx-swap="outerHTML">
+  <input class="form-control" type="hidden" name="id" value="{{.Id}}"/>
+  <div class="col-md-12">
+    <label class="form-label" for="title">Title</label>
+    <input class="form-control" type="text" name="title" style="width: 350px" value="{{.Title}}" required/>
+  </div>
+  <div class="col-md-12">
+    <label class="form-label" for="short">Short-Term Priority</label>
+    <select class="form-select" name="short" required>
+      {{range $option := .ShortOptions}}
+      <option value="{{$option.Value}}"
+              {{if eq $option.Value $task.Short}}selected{{end}}>
+      {{$option.Text}}
+      </option>
+      {{end}}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label class="form-label" for="long">Long-Term Priority</label>
+    <select class="form-select" name="long" required>
+      {{range $option := .LongOptions}}
+      <option value="{{$option.Value}}"
+              {{if eq $option.Value $task.Long}}selected{{end}}>
+      {{$option.Text}}
+      </option>
+      {{end}}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label class="form-label" for="energy">Energy Requirement</label>
+    <select class="form-select" name="energy" required>
+      {{range $option := .EnergyOptions}}
+      <option value="{{$option.Value}}"
+              {{if eq $option.Value $task.Energy}}selected{{end}}>
+      {{$option.Text}}
+      </option>
+      {{end}}
+    </select>
+  </div>
+  <span style="color: #DC3545">
+    <ul>
+      {{range $error := .Errors}}
+      <li>{{$error}}</li>
+      {{end}}
+    </ul>
+  </span>
+</form>
+<form id="complete-task-{{.Id}}-form" hx-post="/complete-task">
+  <input type="hidden" name="id" value="{{.Id}}"/>
+</form>
+<form id="delete-task-{{.Id}}-form" hx-delete="/task">
+  <input type="hidden" name="id" value="{{.Id}}"/>
+</form>
+{{end}}

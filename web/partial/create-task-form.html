@@ -1,0 +1,49 @@
+{{define "create-task-form"}}
+{{$task := .}}
+<form id="create-task-form" class="row g-3" hx-post="/task" hx-target="this" hx-swap="outerHTML">
+  <div class="col-md-12">
+    <label class="form-label" for="title">Title</label>
+    <input class="form-control" type="text" name="title" style="width: 350px" value="{{.Title}}" required/>
+  </div>
+  <div class="col-md-12">
+    <label class="form-label" for="short">Short-Term Priority</label>
+    <select class="form-select" name="short" required>
+      {{range $option := .ShortOptions}}
+      <option value="{{.Value}}"
+              {{if eq $option.Value $task.Short}}selected{{end}}>
+      {{$option.Text}}
+      </option>
+      {{end}}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label class="form-label" for="long">Long-Term Priority</label>
+    <select class="form-select" name="long" required>
+      {{range $option := .LongOptions}}
+      <option value="{{$option.Value}}"
+              {{if eq $option.Value $task.Long}}selected{{end}}>
+      {{$option.Text}}
+      </option>
+      {{end}}
+    </select>
+  </div>
+  <div class="col-md-12">
+    <label class="form-label" for="energy">Energy Requirement</label>
+    <select class="form-select" name="energy" required>
+      {{range $option := .EnergyOptions}}
+      <option value="{{$option.Value}}"
+              {{if eq $option.Value $task.Energy}}selected{{end}}>
+      {{$option.Text}}
+      </option>
+      {{end}}
+    </select>
+  </div>
+  <span style="color: #DC3545">
+    <ul>
+      {{range $error := .Errors}}
+      <li>{{$error}}</li>
+      {{end}}
+    </ul>
+  </span>
+</form>
+{{end}}
