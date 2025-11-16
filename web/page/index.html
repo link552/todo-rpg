@@ -13,134 +13,146 @@
       <header class="text-center mt-4">
         <h1>TODO RPG</h1>
       </header>
-      <nav class="navbar navbar-expand-lg bg-body-tertiary mt-4 p-2">
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#create-task-dialog">Create Task</button>
-        <div class="modal" id="create-task-dialog" tabindex="-1" aria-hidden="true">
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title">Create Task</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-              </div>
-              <div class="modal-body">
-                {{template "create-task-form" .CreateTaskForm}}
-              </div>
-              <div class="modal-footer">
-                <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Close</button>
-                <button class="btn btn-primary" type="submit" form="create-task-form">Create</button>
+      <main>
+        <div class="container border rounded p-3">
+          <b>Level</b>: {{.UserForm.Level}}<br/>
+          <b>Experience</b>: {{.UserForm.TotalExp}}
+        </div>
+        <div class="container border rounded mt-4 p-3">
+          <h2>Current Tasks</h2>
+          <div class="navbar navbar-expand-lg bg-body-tertiary p-2">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#create-task-dialog">Create Task</button>
+            <div class="modal" id="create-task-dialog" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Create Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    {{template "create-task-form" .CreateTaskForm}}
+                  </div>
+                  <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                    <button class="btn btn-primary" type="submit" form="create-task-form">Create</button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+          <div>
+            <section class="mt-4">
+              <table id="tasks-table" class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Priority</th>
+                    <th>Title</th>
+                    <th>Short-Term Priority</th>
+                    <th>Long-Term Priority</th>
+                    <th>Energy Requirement</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{range $row := .CurrentTasksTable}}
+                  <tr>
+                    <td>{{$row.Priority}}</td>
+                    <td>{{$row.Title}}</td>
+                    <td>{{$row.Short}}</td>
+                    <td>{{$row.Long}}</td>
+                    <td>{{$row.Energy}}</td>
+                    <td>
+                      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#view-task-{{$row.Form.Id}}-dialog">Edit</button>
+                      <div class="modal" id="view-task-{{$row.Form.Id}}-dialog" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                          <div class="modal-content">
+                            <div class="modal-header">
+                              <h5 class="modal-title">Edit Task</h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                              {{template "edit-task-form" $row.Form}}
+                            </div>
+                            <div class="modal-footer">
+                              <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirm-delete-{{$row.Form.Id}}-dialog">Delete</button>
+                              <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#confirm-complete-{{$row.Form.Id}}-dialog">Complete</button>
+                              <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                              <button class="btn btn-primary" type="submit" form="edit-task-{{$row.Form.Id}}-form">Save</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="modal" id="confirm-delete-{{$row.Form.Id}}-dialog" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                          <div class="modal-content">
+                            <div class="modal-header">
+                              <h5 class="modal-title">Confirm Delete</h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                              <p>Are you sure you want to <span style="font-weight: bold; color: #DC3545">permanently delete</span> task '{{$row.Form.Title}}'?</p>
+                            </div>
+                            <div class="modal-footer">
+                              <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                              <button class="btn btn-primary" type="submit" form="delete-task-{{$row.Form.Id}}-form">Confirm</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="modal" id="confirm-complete-{{$row.Form.Id}}-dialog" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog">
+                          <div class="modal-content">
+                            <div class="modal-header">
+                              <h5 class="modal-title">Confirm Complete</h5>
+                              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                              <p>Are you sure you want to <span style="font-weight: bold; color: #198754">permanently complete</span> task '{{$row.Form.Title}}'?</p>
+                            </div>
+                            <div class="modal-footer">
+                              <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Close</button>
+                              <button class="btn btn-primary" type="submit" form="complete-task-{{$row.Form.Id}}-form">Confirm</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  {{end}}
+                </tbody>
+              </table>
+            </section>
+          </div>
         </div>
-      </nav>
-      <main>
-        <section class="mt-4">
-          <h2>Current Tasks</h2>
-          <table id="tasks-table" class="table table-striped">
-            <thead>
-              <tr>
-                <th>Priority</th>
-                <th>Title</th>
-                <th>Short-Term Priority</th>
-                <th>Long-Term Priority</th>
-                <th>Energy Requirement</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{range $row := .CurrentTasksTable}}
-              <tr>
-                <td>{{$row.Priority}}</td>
-                <td>{{$row.Title}}</td>
-                <td>{{$row.Short}}</td>
-                <td>{{$row.Long}}</td>
-                <td>{{$row.Energy}}</td>
-                <td>
-                  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#view-task-{{$row.Form.Id}}-dialog">Edit</button>
-                  <div class="modal" id="view-task-{{$row.Form.Id}}-dialog" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog">
-                      <div class="modal-content">
-                        <div class="modal-header">
-                          <h5 class="modal-title">Edit Task</h5>
-                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                          {{template "edit-task-form" $row.Form}}
-                        </div>
-                        <div class="modal-footer">
-                          <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirm-delete-{{$row.Form.Id}}-dialog">Delete</button>
-                          <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#confirm-complete-{{$row.Form.Id}}-dialog">Complete</button>
-                          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Close</button>
-                          <button class="btn btn-primary" type="submit" form="edit-task-{{$row.Form.Id}}-form">Save</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="modal" id="confirm-delete-{{$row.Form.Id}}-dialog" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog">
-                      <div class="modal-content">
-                        <div class="modal-header">
-                          <h5 class="modal-title">Confirm Delete</h5>
-                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                          <p>Are you sure you want to <span style="font-weight: bold; color: #DC3545">permanently delete</span> task '{{$row.Form.Title}}'?</p>
-                        </div>
-                        <div class="modal-footer">
-                          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Close</button>
-                          <button class="btn btn-primary" type="submit" form="delete-task-{{$row.Form.Id}}-form">Confirm</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="modal" id="confirm-complete-{{$row.Form.Id}}-dialog" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog">
-                      <div class="modal-content">
-                        <div class="modal-header">
-                          <h5 class="modal-title">Confirm Complete</h5>
-                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                          <p>Are you sure you want to <span style="font-weight: bold; color: #198754">permanently complete</span> task '{{$row.Form.Title}}'?</p>
-                        </div>
-                        <div class="modal-footer">
-                          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Close</button>
-                          <button class="btn btn-primary" type="submit" form="complete-task-{{$row.Form.Id}}-form">Confirm</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-              {{end}}
-            </tbody>
-          </table>
-        </section>
-        <section class="mt-4">
+        <div class="container border rounded mt-4 p-3">
           <h2>Completed Tasks</h2>
-          <table id="tasks-table" class="table">
-            <thead>
-              <tr>
-                <th>Completed Date</th>
-                <th>Title</th>
-                <th>Short-Term Priority</th>
-                <th>Long-Term Priority</th>
-                <th>Energy Requirement</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{range $row := .CompletedTasksTable}}
-              <tr>
-                <td>{{$row.CompletedOn}}</td>
-                <td>{{$row.Title}}</td>
-                <td>{{$row.Short}}</td>
-                <td>{{$row.Long}}</td>
-                <td>{{$row.Energy}}</td>
-              </tr>
-              {{end}}
-            </tbody>
-          </table>
-        </section>
+          <div>
+            <section>
+              <table id="tasks-table" class="table">
+                <thead>
+                  <tr>
+                    <th>Completed Date</th>
+                    <th>Title</th>
+                    <th>Short-Term Priority</th>
+                    <th>Long-Term Priority</th>
+                    <th>Energy Requirement</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{range $row := .CompletedTasksTable}}
+                  <tr>
+                    <td>{{$row.CompletedOn}}</td>
+                    <td>{{$row.Title}}</td>
+                    <td>{{$row.Short}}</td>
+                    <td>{{$row.Long}}</td>
+                    <td>{{$row.Energy}}</td>
+                  </tr>
+                  {{end}}
+                </tbody>
+              </table>
+            </section>
+          </div>
+        </div>
       </main>
       <footer></footer>
     </div>

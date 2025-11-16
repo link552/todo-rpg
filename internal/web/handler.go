@@ -1,15 +1,20 @@
 package web
 
 import (
-	"sort"
 	"time"
 	"strconv"
 	"strings"
 	"net/http"
 	"html/template"
-	"todorpg/internal/task"
 	"todorpg/internal/storage"
+	"todorpg/internal/game"
+	"todorpg/internal/core"
 )
+
+type userForm struct {
+	Level int
+	TotalExp int
+}
 
 type option struct {
 	Index int
@@ -59,6 +64,7 @@ type completedTaskRow struct {
 }
 
 type indexPage struct {
+	UserForm userForm
 	CreateTaskForm createTaskForm
 	CurrentTasksTable []currentTaskRow
 	CompletedTasksTable []completedTaskRow
@@ -131,8 +137,15 @@ func getEnergyByValue(value string) template.HTML {
 	return ""
 }
 
+
 func GetIndex(writer http.ResponseWriter, request *http.Request) {
+	u := storage.LoadUser(1)
+
 	page := indexPage{
+		UserForm: userForm{
+			Level: u.Level,
+			TotalExp: u.TotalExp,
+		},
 		CreateTaskForm: createTaskForm{
 			ShortOptions: getShortOptions(),
 			LongOptions: getLongOptions(),
@@ -140,19 +153,10 @@ func GetIndex(writer http.ResponseWriter, request *http.Request) {
 		},
 	}
 
-	currentTasks := storage.SelectCurrentTasks()
-
-	// Sort current tasks by priority.
-	// Priority = short-term priority value + long-term priority value.
-	sort.Slice(currentTasks, func(i, j int) bool {
-		return currentTasks[i].Short + currentTasks[i].Long > currentTasks[j].Short + currentTasks[j].Long
-	})
+	currentTasks := storage.LoadCurrentTasks()
+	game.PrioritizeTasks(&currentTasks)
 
 	for i := range currentTasks {
-		// Assign numerical values to the priorities.
-		currentTasks[i].Priority = i + 1
-
-		// Create row and add to the table.
 		t := currentTasks[i]
 
 		short := strconv.Itoa(t.Short)
@@ -180,17 +184,9 @@ func GetIndex(writer http.ResponseWriter, request *http.Request) {
 		page.CurrentTasksTable = append(page.CurrentTasksTable, row)
 	}
 
-	completedTasks := storage.SelectCompletedTasks()
-
-	// Sort completed tasks by completed date.
-	sort.Slice(completedTasks, func(i, j int) bool {
-		timeA := completedTasks[i].CompletedOn
-		timeB := completedTasks[j].CompletedOn
-		return timeA.After(timeB)
-	})
-
+	completedTasks := storage.LoadCompletedTasks()
+	game.SortTasksByCompletedOn(&completedTasks)
 	for i := range completedTasks {
-		// Create row and add to the table.
 		t := completedTasks[i]
 
 		row := completedTaskRow{
@@ -270,14 +266,7 @@ func PostTask(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	t := task.Task{
-		Title: title,
-		Short: short,
-		Long: long,
-		Energy: energy,
-	}
-
-	storage.InsertTask(t)
+	storage.CreateTask(title, short, long, energy)
 
 	writer.Header().Set("HX-Redirect", "/")
 }
@@ -341,7 +330,7 @@ func PutTask(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	t := task.Task{
+	t := core.Task{
 		Id: id,
 		Title: title,
 		Short: short,
@@ -349,7 +338,7 @@ func PutTask(writer http.ResponseWriter, request *http.Request) {
 		Energy: energy,
 	}
 
-	storage.UpdateTask(t)
+	storage.SaveTask(t)
 
 	writer.Header().Set("HX-Redirect", "/")
 }
@@ -361,13 +350,21 @@ func PostCompleteTask(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	id, err := strconv.Atoi(request.FormValue("id"))
+	userId := 1
+
+	taskId, err := strconv.Atoi(request.FormValue("id"))
 	if err != nil {
 		http.Error(writer, "Invalid id.", http.StatusBadRequest)
 		return
 	}
 
-	storage.CompleteTask(id)
+	u := storage.LoadUser(userId)
+	t := storage.LoadTask(taskId)
+
+	game.CompleteTask(&u, &t)
+
+	storage.SaveUser(u)
+	storage.SaveTask(t)
 
 	writer.Header().Set("HX-Redirect", "/")
 }

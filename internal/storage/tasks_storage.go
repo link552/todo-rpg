@@ -1,29 +1,13 @@
 package storage
 
 import (
-	"database/sql"
-	"todorpg/internal/task"
+	"todorpg/internal/core"
 	"time"
 	"os"
 	_ "modernc.org/sqlite"
 )
 
-var db *sql.DB
-
-func Init() {
-	sqliteDbPath := os.Getenv("SQLITE_DB_PATH")
-	if sqliteDbPath == "" {
-		sqliteDbPath = "./todorpg.db"
-	}
-
-	var err error
-	db, err = sql.Open("sqlite", sqliteDbPath)
-	if err != nil {
-		// TODO: Handle error.
-		println(err.Error)
-		os.Exit(1)
-	}
-
+func initTasksStorage() {
 	sql := `
 	CREATE TABLE IF NOT EXISTS Tasks (
 		Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,6 +18,7 @@ func Init() {
 		CompletedOn TEXT DEFAULT NULL
 	);
 	`
+
 	if _, err := db.Exec(sql); err != nil {
 		// TODO: Handle error.
 		println(err.Error())
@@ -41,11 +26,7 @@ func Init() {
 	}
 }
 
-func Deinit() {
-	db.Close()
-}
-
-func SelectCurrentTasks() []task.Task {
+func LoadCurrentTasks() []core.Task {
 	sql := `
 	SELECT Id, Title, Short, Long, Energy
 	FROM Tasks
@@ -60,10 +41,10 @@ func SelectCurrentTasks() []task.Task {
 	}
 	defer rows.Close()
 
-	var currentTasks []task.Task
+	var currentTasks []core.Task
 
 	for rows.Next() {
-		var t task.Task
+		var t core.Task
 		rows.Scan(&t.Id, &t.Title, &t.Short, &t.Long, &t.Energy);
 		currentTasks = append(currentTasks, t)
 	}
@@ -71,7 +52,7 @@ func SelectCurrentTasks() []task.Task {
 	return currentTasks
 }
 
-func SelectCompletedTasks() []task.Task {
+func LoadCompletedTasks() []core.Task {
 	sql := `
 	SELECT Id, Title, Short, Long, Energy, CompletedOn
 	FROM Tasks
@@ -86,11 +67,11 @@ func SelectCompletedTasks() []task.Task {
 	}
 	defer rows.Close()
 
-	var currentTasks []task.Task
+	var currentTasks []core.Task
 
 	for rows.Next() {
 		var completedOnStr string
-		var t task.Task
+		var t core.Task
 		rows.Scan(&t.Id, &t.Title, &t.Short, &t.Long, &t.Energy, &completedOnStr);
 		t.CompletedOn, err = time.Parse(time.DateTime, completedOnStr)
 		if err != nil {
@@ -102,43 +83,67 @@ func SelectCompletedTasks() []task.Task {
 	return currentTasks
 }
 
-func InsertTask(t task.Task) {
+func LoadTask(id int) core.Task {
+	sql := `
+	SELECT Id, Title, Short, Long, Energy, CompletedOn
+	FROM Tasks
+	WHERE Id = ?
+	`
+
+	rows, err := db.Query(sql, id)
+	if err != nil {
+		// TODO: Handle error.
+		println(err.Error())
+		os.Exit(1)
+	}
+	defer rows.Close()
+
+	var t core.Task
+
+	if rows.Next() {
+		var completedOnStr string
+		rows.Scan(&t.Id, &t.Title, &t.Short, &t.Long, &t.Energy, &completedOnStr);
+		t.CompletedOn, err = time.Parse(time.DateTime, completedOnStr)
+		if err != nil {
+			// TODO: Handle error.
+		}
+	}
+
+	return t
+}
+
+func CreateTask(title string, short int, long int, energy int) int {
 	sql := `
 	INSERT INTO Tasks (Title, Short, Long, Energy)
 	VALUES (?, ?, ?, ?)
 	`
 
-	_, err := db.Exec(sql, t.Title, t.Short, t.Long, t.Energy)
+	res, err := db.Exec(sql, title, short, long, energy)
 	if err != nil {
 		// TODO: Handle error.
 		println(err.Error())
 		os.Exit(1)
 	}
-}
 
-func UpdateTask(t task.Task) {
-	sql := `
-	UPDATE Tasks
-	SET Title = ?, Short = ?, Long = ?, Energy = ?
-	WHERE Id = ?
-	`
-
-	_, err := db.Exec(sql, t.Title, t.Short, t.Long, t.Energy, t.Id)
+	id, err := res.LastInsertId()
 	if err != nil {
 		// TODO: Handle error.
 		println(err.Error())
 		os.Exit(1)
 	}
+
+	 return int(id)
 }
 
-func CompleteTask(id int) {
+func SaveTask(t core.Task) {
 	sql := `
 	UPDATE Tasks
-	SET CompletedOn = ?
+	SET Title = ?, Short = ?, Long = ?, Energy = ?, CompletedOn = ?
 	WHERE Id = ?
 	`
+
 	completedOnStr := time.Now().Format(time.DateTime)
-	_, err := db.Exec(sql, completedOnStr, id)
+	_, err := db.Exec(sql, t.Title, t.Short, t.Long, t.Energy, completedOnStr, t.Id)
 	if err != nil {
 		// TODO: Handle error.
 		println(err.Error())

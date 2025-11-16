@@ -1,6 +1,12 @@
-package task
+package core
 
 import "time"
+
+type User struct {
+	Id int
+	Level int
+	TotalExp int
+}
 
 type Task struct {
 	Id int
