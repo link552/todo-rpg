@@ -18,6 +18,7 @@ func main() {
 	storage.Init();
 	defer storage.Deinit();
 
+	http.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./web/static"))))
 	http.HandleFunc("GET /", web.GetIndex)
 	http.HandleFunc("POST /task", web.PostTask)
 	http.HandleFunc("PUT /task", web.PutTask)
