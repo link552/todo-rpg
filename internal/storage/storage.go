@@ -22,8 +22,10 @@ func Init() {
 		os.Exit(1)
 	}
 
-	initUsersStorage();
-	initTasksStorage();
+	initUsersStorage()
+	initTasksStorage()
+	initEventsStorage()
+	initLevelProgressStorage()
 }
 
 func Deinit() {

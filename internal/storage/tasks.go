@@ -142,7 +142,7 @@ func SaveTask(t core.Task) {
 	WHERE Id = ?
 	`
 
-	completedOnStr := time.Now().Format(time.DateTime)
+	completedOnStr := t.CompletedOn.Format(time.DateTime)
 	_, err := db.Exec(sql, t.Title, t.Short, t.Long, t.Energy, completedOnStr, t.Id)
 	if err != nil {
 		// TODO: Handle error.

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"net/http"
 	"todorpg/internal/web"
@@ -27,5 +26,5 @@ func main() {
 
 	fmt.Println("Server starting on port", httpPort)
 
-	log.Fatal(http.ListenAndServe("localhost:" + httpPort, nil))
+	http.ListenAndServe("localhost:" + httpPort, nil)
 }

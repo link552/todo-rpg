@@ -4,6 +4,7 @@ import (
 	"time"
 	"strconv"
 	"strings"
+	"encoding/json"
 	"net/http"
 	"html/template"
 	"todorpg/internal/storage"
@@ -14,6 +15,7 @@ import (
 type userForm struct {
 	Level int
 	TotalExp int
+	NextLevelExp int
 }
 
 type option struct {
@@ -63,11 +65,18 @@ type completedTaskRow struct {
 	Energy template.HTML
 }
 
+type levelProgressRecord struct {
+	FromLevel int
+	ToLevel int
+	ToPercent float32
+}
+
 type indexPage struct {
 	UserForm userForm
 	CreateTaskForm createTaskForm
 	CurrentTasksTable []currentTaskRow
 	CompletedTasksTable []completedTaskRow
+	LevelProgressJson template.JS
 }
 
 func getShortOptions() []option {
@@ -137,14 +146,21 @@ func getEnergyByValue(value string) template.HTML {
 	return ""
 }
 
-
 func GetIndex(writer http.ResponseWriter, request *http.Request) {
+	// Only handle "/".
+	if request.URL.Path != "/" {
+		http.NotFound(writer, request)
+		return
+	}
+
+	// Begin structuring page object.
 	u := storage.LoadUser(1)
 
 	page := indexPage{
 		UserForm: userForm{
 			Level: u.Level,
 			TotalExp: u.TotalExp,
+			NextLevelExp: game.GetExpToNextLevel(u.Level),
 		},
 		CreateTaskForm: createTaskForm{
 			ShortOptions: getShortOptions(),
@@ -153,6 +169,7 @@ func GetIndex(writer http.ResponseWriter, request *http.Request) {
 		},
 	}
 
+	// Add current tasks to page object.
 	currentTasks := storage.LoadCurrentTasks()
 	game.PrioritizeTasks(&currentTasks)
 
@@ -184,6 +201,7 @@ func GetIndex(writer http.ResponseWriter, request *http.Request) {
 		page.CurrentTasksTable = append(page.CurrentTasksTable, row)
 	}
 
+	// Add completed tasks to page object.
 	completedTasks := storage.LoadCompletedTasks()
 	game.SortTasksByCompletedOn(&completedTasks)
 	for i := range completedTasks {
@@ -200,6 +218,37 @@ func GetIndex(writer http.ResponseWriter, request *http.Request) {
 		page.CompletedTasksTable = append(page.CompletedTasksTable, row)
 	}
 
+	// Add level progress to page object.
+	lps := storage.LoadUserLevelProgress(u.Id)
+	uniqueEventIds := make(map[int]struct{}, len(lps))
+	var lpRecords []levelProgressRecord
+
+	for i := range lps {
+		lp := lps[i]
+
+		record := levelProgressRecord{
+			FromLevel: lp.FromLevel,
+			ToLevel: lp.ToLevel,
+			ToPercent: lp.ToPercent,
+		}
+
+		lpRecords = append(lpRecords, record)
+		uniqueEventIds[lp.EventId] = struct{}{}
+	}
+
+	lpJson, _ := json.Marshal(lpRecords)
+	page.LevelProgressJson = template.JS(lpJson)
+
+	// Close events, marking them as processed.
+	var eventIds []int
+
+	for i := range uniqueEventIds {
+		eventIds = append(eventIds, i)
+	}
+
+	storage.CloseEvents(eventIds)
+
+	// Generate template HTML.
 	tmpl, err := template.ParseFiles("web/page/index.html", "web/partial/create-task-form.html", "web/partial/edit-task-form.html")
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
@@ -330,7 +379,7 @@ func PutTask(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	t := core.Task{
+	task := core.Task{
 		Id: id,
 		Title: title,
 		Short: short,
@@ -338,7 +387,7 @@ func PutTask(writer http.ResponseWriter, request *http.Request) {
 		Energy: energy,
 	}
 
-	storage.SaveTask(t)
+	storage.SaveTask(task)
 
 	writer.Header().Set("HX-Redirect", "/")
 }
@@ -358,13 +407,24 @@ func PostCompleteTask(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	u := storage.LoadUser(userId)
-	t := storage.LoadTask(taskId)
+	user := storage.LoadUser(userId)
+	task := storage.LoadTask(taskId)
 
-	game.CompleteTask(&u, &t)
+	levelProgresses := game.CompleteTask(&user, &task)
 
-	storage.SaveUser(u)
-	storage.SaveTask(t)
+	// Create level progression events.
+	if len(levelProgresses) > 0 {
+		eventId := storage.CreateEvent(userId, "level-progress")
+
+		for i := range levelProgresses {
+			levelProgresses[i].EventId = eventId
+		}
+
+		storage.InsertLevelProgress(levelProgresses)
+	}
+
+	storage.SaveUser(user)
+	storage.SaveTask(task)
 
 	writer.Header().Set("HX-Redirect", "/")
 }

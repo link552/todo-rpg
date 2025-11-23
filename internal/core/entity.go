@@ -17,3 +17,18 @@ type Task struct {
 	Priority int
 	CompletedOn time.Time
 }
+
+type Event struct {
+	Id int
+	UserId int
+	Type string
+	ProcessedOn time.Time
+}
+
+type LevelProgress struct {
+	EventId int
+	FromLevel int
+	ToLevel int
+	ToPercent float32
+	Sequence int
+}
